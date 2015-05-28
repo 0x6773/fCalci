@@ -5,47 +5,41 @@ let (|RegexMatch2|_|) (pattern : string) (input : string) =
     let result = Regex.Match(input, pattern)
     if result.Success then
         match (List.tail [for g in result.Groups -> g.Value]) with
-        | fst :: snd :: []   
+        |  pre :: fst :: snd :: suff :: [ ] 
             ->  let x = float <| fst 
                 let y = float <| snd
-                Some(x, y)
+                Some(pre, x, y, suff)
         | _ -> failwithf "Match Succeeded, but unable to find elements."
     else None            
 
-let (|Zero|Add|Subs|Mult|Div|Equl|) = 
+let (|Done|Add|Subs|Mult|Div|Equl|) = 
     function
-    | RegexMatch2 @"([0-9.]+)\+([0-9.]+)" (fst, snd)
-        -> Add (fst + snd)
-    | RegexMatch2 @"([0-9.]+)\-([0-9.]+)" (fst, snd)
-        -> Subs (fst - snd)
-    | RegexMatch2 @"([0-9.]+)\*([0-9.]+)" (fst, snd)
-        -> Mult (fst * snd)
-    | RegexMatch2 @"([0-9.]+)\/([0-9.]+)" (fst, snd)
-        -> Div (fst / snd)          
-    | RegexMatch2 @"([0-9.]+)\=([0-9.]+)" (fst, snd)
-        -> Equl (fst = snd)          
-    | _ -> Zero
-
-let help()=
-    printfn "fCalci Help"
-    printfn "Type 'E' to exit"
-    ()
+    | RegexMatch2 @"(.+[\+\-\*\/])*([0-9.]+)\/([0-9.]+)([\+\-\*\/].+)*" (pre, fst, snd, suff)
+        -> Div ( sprintf "%s%g%s" pre (fst / snd) suff)
+    | RegexMatch2 @"(.+[\+\-\*])*([0-9.]+)\*([0-9.]+)([\+\-\*].+)*" (pre, fst, snd, suff)
+        -> Mult ( sprintf "%s%g%s" pre (fst * snd) suff)
+    | RegexMatch2 @"(.+[\+\-])*([0-9.]+)\+([0-9.]+)([\+\-].+)*" (pre, fst, snd, suff)
+        -> Add ( sprintf "%s%g%s" pre (fst + snd) suff)
+    | RegexMatch2 @"(.+[\-])*([0-9.]+)\-([0-9.]+)([\-].+)*" (pre, fst, snd, suff)
+        -> Subs ( sprintf "%s%g%s" pre (fst - snd) suff)
+    | RegexMatch2 @"([0-9.]+)\=([0-9.]+)" (pre, fst, snd, suff)
+        -> Equl (fst = snd)
+    | ans -> Done (ans)
 
 [<EntryPoint>]
 let main argv = 
 
-    let mutable inn = ""
+    while true do
+        let inn = Console.ReadLine().Trim().Replace(" ","")
 
-    while inn.ToUpper() <> "E" do
-        inn <- Console.ReadLine().Trim().Replace(" ","")
-
-        match inn with
-        | "E" -> ()
-        | "hp" -> help()
-        | Add res | Subs res | Mult res | Div res
-            ->  printfn "%s => %g" inn res
-        | Equl resb
-            -> printfn "%s => %b" inn resb
-        | Zero 
-            -> printfn "0"
+        let rec calculate (input : string) =
+            match input with
+            | "E" -> ()
+            | Div res | Mult res | Add res | Subs res
+                -> calculate res
+            | Equl resb
+                -> printfn "%s => %b" inn resb
+            | Done res
+                -> printfn "%s => %s" inn res
+        calculate inn
     0
