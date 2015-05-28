@@ -9,18 +9,22 @@ let (|RegexMatch2|_|) (pattern : string) (input : string) =
             ->  let x = float <| fst 
                 let y = float <| snd
                 Some(pre, x, y, suff)
-        | _ -> failwithf "Match Succeeded, but unable to find elements."
+        | fst :: snd :: [ ]
+            ->  let x = float <| fst 
+                let y = float <| snd
+                Some("", x, y, "")            
+        | _ -> None
     else None            
 
 let (|Done|Add|Subs|Mult|Div|Equl|) = 
     function
-    | RegexMatch2 @"(.+[\+\-\*\/])*([0-9.]+)\/([0-9.]+)([\+\-\*\/].+)*" (pre, fst, snd, suff)
+    | RegexMatch2 @"(.+[\+\-\*\/\=])*([0-9.]+)\/([0-9.]+)([\+\-\*\/\=].+)*" (pre, fst, snd, suff)
         -> Div ( sprintf "%s%g%s" pre (fst / snd) suff)
-    | RegexMatch2 @"(.+[\+\-\*])*([0-9.]+)\*([0-9.]+)([\+\-\*].+)*" (pre, fst, snd, suff)
+    | RegexMatch2 @"(.+[\+\-\*\=])*([0-9.]+)\*([0-9.]+)([\+\-\*\=].+)*" (pre, fst, snd, suff)
         -> Mult ( sprintf "%s%g%s" pre (fst * snd) suff)
-    | RegexMatch2 @"(.+[\+\-])*([0-9.]+)\+([0-9.]+)([\+\-].+)*" (pre, fst, snd, suff)
+    | RegexMatch2 @"(.+[\+\-\=])*([0-9.]+)\+([0-9.]+)([\+\-\=].+)*" (pre, fst, snd, suff)
         -> Add ( sprintf "%s%g%s" pre (fst + snd) suff)
-    | RegexMatch2 @"(.+[\-])*([0-9.]+)\-([0-9.]+)([\-].+)*" (pre, fst, snd, suff)
+    | RegexMatch2 @"(.+[\-\=])*([0-9.]+)\-([0-9.]+)([\-\=].+)*" (pre, fst, snd, suff)
         -> Subs ( sprintf "%s%g%s" pre (fst - snd) suff)
     | RegexMatch2 @"([0-9.]+)\=([0-9.]+)" (pre, fst, snd, suff)
         -> Equl (fst = snd)
@@ -29,10 +33,13 @@ let (|Done|Add|Subs|Mult|Div|Equl|) =
 [<EntryPoint>]
 let main argv = 
 
-    while true do
-        let inn = Console.ReadLine().Trim().Replace(" ","")
+    let (|TrimAndReplaced|) ( x : string ) = 
+        x.Trim().Replace(" ","")
 
-        let rec calculate (input : string) =
+    while true do
+        let inn = Console.ReadLine()
+
+        let rec calculate ( TrimAndReplaced input ) =
             match input with
             | "E" -> ()
             | Div res | Mult res | Add res | Subs res
